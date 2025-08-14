@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invitación Interactiva</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Suaviza las animaciones y evita selección accidental */
+    * { -webkit-tap-highlight-color: transparent; }
+    .no-select { user-select: none; }
+    /* Nieve */
+    @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: 1; } }
+    .flake { position:absolute; top:-2rem; opacity:.8; border-radius:9999px; background:white; filter:drop-shadow(0 2px 6px rgba(0,0,0,.08)); }
+  </style>
+  <!-- Librerías: QR, exportación a PNG y guardar archivo -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-rose-50 via-fuchsia-50 to-pink-50 p-4 md:p-8">
+  <main class="max-w-6xl mx-auto space-y-6">
+    <!-- Panel de controles -->
+    <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-5 md:p-7">
+      <h1 class="text-2xl font-extrabold tracking-tight">Configura tu invitación (HTML puro)</h1>
+      <div class="grid md:grid-cols-3 gap-5 mt-4">
+        <div class="space-y-3">
+          <label class="text-sm font-medium">Título</label>
+          <input id="titulo" class="w-full border rounded-lg p-2" value="Fiesta de Lanzamiento SANIYE" />
+          <label class="text-sm font-medium">Subtítulo</label>
+          <input id="subtitulo" class="w-full border rounded-lg p-2" value="Brilla con nuestro nuevo gloss ✨" />
+          <label class="text-sm font-medium">Descripción</label>
+          <textarea id="descripcion" rows="4" class="w-full border rounded-lg p-2">Acompáñanos a celebrar con música, regalos y muchas sorpresas. Dress code: toques rosados 💖</textarea>
+        </div>
+        <div class="space-y-3">
+          <label class="text-sm font-medium">Fecha</label>
+          <input id="fecha" class="w-full border rounded-lg p-2" value="Sábado 30 de agosto, 2025" />
+          <label class="text-sm font-medium">Hora</label>
+          <input id="hora" class="w-full border rounded-lg p-2" value="6:00 PM" />
+          <label class="text-sm font-medium">Lugar</label>
+          <input id="lugar" class="w-full border rounded-lg p-2" value="Showroom SANIYE – CDMX" />
+          <label class="text-sm font-medium">Dirección</label>
+          <input id="direccion" class="w-full border rounded-lg p-2" value="Av. Ejemplo 123, Col. Centro" />
+        </div>
+        <div class="space-y-3">
+          <label class="text-sm font-medium">Link de RSVP / info</label>
+          <input id="link" class="w-full border rounded-lg p-2" value="https://saniye.mx/rsvp" />
+          <div class="flex items-center gap-4 pt-2">
+            <label class="flex items-center gap-2 text-sm"><input id="nieveToggle" type="checkbox" checked> Nieve</label>
+            <label class="flex items-center gap-2 text-sm"><input id="qrToggle" type="checkbox" checked> Mostrar QR</label>
+          </div>
+          <div>
+            <label class="text-sm font-medium">Tema</label>
+            <select id="tema" class="w-full border rounded-lg p-2 mt-1">
+              <option value="rosa" selected>Rosa</option>
+              <option value="dorado">Dorado</option>
+              <option value="noche">Noche</option>
+            </select>
+          </div>
+          <div class="pt-2 grid grid-cols-2 gap-3 items-center">
+            <label class="text-sm">Logo</label>
+            <input id="logo" type="file" accept="image/*" class="text-sm" />
+            <label class="text-sm">Tamaño logo</label>
+            <input id="logoSize" type="range" min="60" max="260" step="10" value="140" />
+            <label class="text-sm">Opacidad logo</label>
+            <input id="logoOpacity" type="range" min="30" max="100" step="5" value="100" />
+            <label class="text-sm">Invertir (fondos oscuros)</label>
+            <input id="logoInvert" type="checkbox" />
+            <label class="text-sm">Posición logo</label>
+            <select id="logoPos" class="border rounded-lg p-2">
+              <option value="top-left">Arriba izq.</option>
+              <option value="top-center">Arriba centro</option>
+              <option value="top-right">Arriba der.</option>
+              <option value="center">Centro</option>
+              <option value="bottom-left">Abajo izq.</option>
+              <option value="bottom-center">Abajo centro</option>
+              <option value="bottom-right">Abajo der.</option>
+            </select>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button id="btnCopiar" class="px-3 py-2 rounded-xl bg-black text-white text-sm">Copiar texto</button>
+            <button id="btnPNG" class="px-3 py-2 rounded-xl bg-gray-200 text-sm">Exportar PNG</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lienzo de la invitación -->
+    <section class="max-w-3xl mx-auto">
+      <div id="card" class="relative rounded-3xl shadow-xl overflow-hidden border-0 bg-gradient-to-br from-pink-100 via-rose-100 to-fuchsia-100" style="aspect-ratio:4/5;">
+        <!-- nieve -->
+        <div id="snow" class="pointer-events-none absolute inset-0 overflow-hidden"></div>
+
+        <!-- logo -->
+        <img id="logoImg" alt="Logo" class="absolute z-20 hidden" />
+
+        <!-- brillos -->
+        <div class="absolute inset-0">
+          <div class="absolute -top-10 -left-10 w-56 h-56 rounded-full blur-3xl opacity-40 bg-pink-300"></div>
+          <div class="absolute -bottom-10 -right-10 w-64 h-64 rounded-full blur-3xl opacity-40 bg-fuchsia-300"></div>
+        </div>
+
+        <div class="relative h-full w-full p-6 md:p-10 flex flex-col">
+          <div class="flex items-center justify-between">
+            <h2 id="outTitulo" class="text-2xl md:text-4xl font-extrabold tracking-tight drop-shadow-sm text-pink-600">Fiesta de Lanzamiento SANIYE</h2>
+            <span class="text-fuchsia-500" aria-hidden>🎉</span>
+          </div>
+          <p id="outSub" class="mt-2 text-sm md:text-base text-slate-700/80">Brilla con nuestro nuevo gloss ✨</p>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
+              <div class="shrink-0">📅</div>
+              <div>
+                <p class="text-xs uppercase tracking-wide opacity-70">Fecha</p>
+                <p id="outFecha" class="font-semibold">Sábado 30 de agosto, 2025</p>
+              </div>
+            </div>
+            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
+              <div class="shrink-0">⏰</div>
+              <div>
+                <p class="text-xs uppercase tracking-wide opacity-70">Hora</p>
+                <p id="outHora" class="font-semibold">6:00 PM</p>
+              </div>
+            </div>
+            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
+              <div class="shrink-0">📍</div>
+              <div>
+                <p class="text-xs uppercase tracking-wide opacity-70">Lugar</p>
+                <p id="outLugar" class="font-semibold">Showroom SANIYE – CDMX</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+            <div class="md:col-span-2 bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4">
+              <p id="outDesc" class="text-sm leading-relaxed whitespace-pre-line">Acompáñanos a celebrar con música, regalos y muchas sorpresas. Dress code: toques rosados 💖</p>
+              <a id="outLink" href="https://saniye.mx/rsvp" target="_blank" class="inline-flex mt-3 items-center gap-2 text-sm font-semibold underline text-pink-600">Confirmar asistencia</a>
+            </div>
+            <div id="qrWrap" class="bg-white/80 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-center justify-center">
+              <canvas id="qrCanvas" width="156" height="156" aria-label="Código QR"></canvas>
+            </div>
+          </div>
+
+          <div class="mt-auto pt-4 flex items-center justify-between">
+            <div id="outDir" class="text-xs opacity-70">Av. Ejemplo 123, Col. Centro</div>
+            <div id="outYear" class="text-xs font-medium text-pink-600"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const data = {
+      titulo: document.getElementById('titulo'),
+      subtitulo: document.getElementById('subtitulo'),
+      descripcion: document.getElementById('descripcion'),
+      fecha: document.getElementById('fecha'),
+      hora: document.getElementById('hora'),
+      lugar: document.getElementById('lugar'),
+      direccion: document.getElementById('direccion'),
+      link: document.getElementById('link'),
+      tema: document.getElementById('tema'),
+      nieveToggle: document.getElementById('nieveToggle'),
+      qrToggle: document.getElementById('qrToggle'),
+      logo: document.getElementById('logo'),
+      logoSize: document.getElementById('logoSize'),
+      logoOpacity: document.getElementById('logoOpacity'),
+      logoInvert: document.getElementById('logoInvert'),
+      logoPos: document.getElementById('logoPos'),
+    };
+
+    const out = {
+      card: document.getElementById('card'),
+      snow: document.getElementById('snow'),
+      logoImg: document.getElementById('logoImg'),
+      outTitulo: document.getElementById('outTitulo'),
+      outSub: document.getElementById('outSub'),
+      outFecha: document.getElementById('outFecha'),
+      outHora: document.getElementById('outHora'),
+      outLugar: document.getElementById('outLugar'),
+      outDesc: document.getElementById('outDesc'),
+      outLink: document.getElementById('outLink'),
+      outDir: document.getElementById('outDir'),
+      outYear: document.getElementById('outYear'),
+      qrWrap: document.getElementById('qrWrap'),
+      qrCanvas: document.getElementById('qrCanvas'),
+    };
+
+    const themes = {
+      rosa: { bg: 'from-pink-100 via-rose-100 to-fuchsia-100', primary: 'text-pink-600' },
+      dorado: { bg: 'from-amber-50 via-yellow-50 to-rose-50', primary: 'text-amber-600' },
+      noche: { bg: 'from-slate-900 via-fuchsia-900/40 to-slate-900', primary: 'text-fuchsia-400', dark:true },
+    };
+
+    function applyTheme() {
+      const t = themes[data.tema.value] || themes.rosa;
+      out.card.className = `relative rounded-3xl shadow-xl overflow-hidden border-0 bg-gradient-to-br ${t.bg}`;
+      out.outTitulo.className = `text-2xl md:text-4xl font-extrabold tracking-tight drop-shadow-sm ${t.primary}`;
+      out.outLink.className = `inline-flex mt-3 items-center gap-2 text-sm font-semibold underline ${t.primary}`;
+      out.outYear.className = `text-xs font-medium ${t.primary}`;
+      // fondo oscuro => sugerir invertir logo
+      if (themes[data.tema.value]?.dark) { data.logoInvert.checked = true; }
+      updateLogo();
+    }
+
+    function renderText() {
+      out.outTitulo.textContent = data.titulo.value;
+      out.outSub.textContent = data.subtitulo.value;
+      out.outFecha.textContent = data.fecha.value;
+      out.outHora.textContent = data.hora.value;
+      out.outLugar.textContent = data.lugar.value;
+      out.outDesc.textContent = data.descripcion.value;
+      out.outLink.href = data.link.value || '#';
+      out.outDir.textContent = data.direccion.value;
+      out.outYear.textContent = new Date().getFullYear() + ' · Invitación';
+    }
+
+    // QR
+    function renderQR() {
+      out.qrWrap.classList.toggle('hidden', !data.qrToggle.checked);
+      if (!data.qrToggle.checked) return;
+      QRCode.toCanvas(out.qrCanvas, data.link.value || 'https://example.com', { width: 156, margin: 1 }, (e)=>{ if(e) console.error(e); });
+    }
+
+    // Nieve
+    function snowOn() {
+      out.snow.innerHTML = '';
+      if (!data.nieveToggle.checked) return;
+      const N = 70;
+      for (let i=0;i<N;i++) {
+        const s = document.createElement('span');
+        s.className = 'flake';
+        const size = Math.random()*6 + 2; // 2-8px
+        s.style.width = size+'px'; s.style.height = size+'px';
+        s.style.left = Math.random()*100+'%';
+        const dur = 8 + Math.random()*10; // 8-18s
+        const delay = Math.random()*10;
+        s.style.animation = `fall ${dur}s linear ${delay}s infinite`;
+        out.snow.appendChild(s);
+      }
+    }
+
+    // Logo
+    let logoURL = null;
+    data.logo.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{ logoURL = reader.result; updateLogo(); };
+      reader.readAsDataURL(file);
+    });
+
+    function updateLogo() {
+      if (!logoURL) { out.logoImg.classList.add('hidden'); return; }
+      out.logoImg.src = logoURL;
+      out.logoImg.classList.remove('hidden');
+      const pos = {
+        'top-left': ['top:1.5rem','left:1.5rem','transform:none'],
+        'top-center': ['top:1.5rem','left:50%','transform:translateX(-50%)'],
+        'top-right': ['top:1.5rem','right:1.5rem','transform:none'],
+        'center': ['top:50%','left:50%','transform:translate(-50%,-50%)'],
+        'bottom-left': ['bottom:1.5rem','left:1.5rem','transform:none'],
+        'bottom-center': ['bottom:1.5rem','left:50%','transform:translateX(-50%)'],
+        'bottom-right': ['bottom:1.5rem','right:1.5rem','transform:none'],
+      }[data.logoPos.value] || [];
+      out.logoImg.style.cssText = `${pos.join(';')}; width:${data.logoSize.value}px; opacity:${data.logoOpacity.value/100}; filter:${data.logoInvert.checked?'invert(1)':'none'};`;
+    }
+
+    // Copiar texto
+    document.getElementById('btnCopiar').addEventListener('click', async ()=>{
+      const text = `${data.titulo.value}\n${data.subtitulo.value}\n${data.fecha.value} – ${data.hora.value}\n${data.lugar.value}\n${data.direccion.value}\nConfirma: ${data.link.value}`;
+      try { await navigator.clipboard.writeText(text); alert('Texto copiado ✨'); } catch(e){ alert('No se pudo copiar'); }
+    });
+
+    // Exportar PNG
+    document.getElementById('btnPNG').addEventListener('click', async ()=>{
+      try { const dataUrl = await htmlToImage.toPng(out.card,{pixelRatio:2}); saveAs(dataUrl,'invitacion.png'); } catch(e){ alert('No pude exportar 😅'); }
+    });
+
+    // Listeners de cambios
+    ['input','change'].forEach(evt=>{
+      ['titulo','subtitulo','descripcion','fecha','hora','lugar','direccion','link'].forEach(id=>{
+        data[id].addEventListener(evt, ()=>{ renderText(); renderQR(); });
+      });
+      data.tema.addEventListener(evt, applyTheme);
+      data.nieveToggle.addEventListener(evt, snowOn);
+      data.qrToggle.addEventListener(evt, renderQR);
+      ['logoSize','logoOpacity','logoInvert','logoPos'].forEach(id=>{
+        data[id].addEventListener(evt, updateLogo);
+      });
+    });
+
+    // Inicio
+    renderText(); applyTheme(); renderQR(); snowOn(); updateLogo();
+  </script>
+</body>
+</html>
