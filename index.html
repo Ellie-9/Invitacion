@@ -1,299 +1,162 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Invitación Interactiva</title>
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Suaviza las animaciones y evita selección accidental */
-    * { -webkit-tap-highlight-color: transparent; }
-    .no-select { user-select: none; }
-    /* Nieve */
-    @keyframes fall { to { transform: translateY(110vh) rotate(360deg); opacity: 1; } }
-    .flake { position:absolute; top:-2rem; opacity:.8; border-radius:9999px; background:white; filter:drop-shadow(0 2px 6px rgba(0,0,0,.08)); }
-  </style>
-  <!-- Librerías: QR, exportación a PNG y guardar archivo -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>POSADA NAVIDEÑA – Invitación</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+<style>
+  /* Paleta dorada elegante */
+  :root {
+    --gold-1: #b8892e; /* dorado oscuro */
+    --gold-2: #d6b35e; /* dorado medio */
+    --gold-3: #f1e3a6; /* brillo */
+  }
+  body{ background:#ffffff; }
+  .inv-card{ background:#ffffff; border-radius:1.5rem; box-shadow:0 20px 40px rgba(0,0,0,.08); overflow:hidden; position:relative; }
+  .gold-border{ position:relative; }
+  .gold-border::after{ content:""; position:absolute; inset:0; padding:2px; border-radius:1.5rem; background:linear-gradient(135deg,var(--gold-1),var(--gold-2),var(--gold-3),var(--gold-1)); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; }
+
+  /* Encabezado con nieve y esferas */
+  .header{ position:relative; height:220px; overflow:hidden; }
+  .title-gold{ background:linear-gradient(90deg,var(--gold-3),var(--gold-2),var(--gold-1)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtle{ color:#6b7280; }
+
+  /* nieve solo en encabezado */
+  @keyframes caer { to { transform: translateY(240px) rotate(360deg); opacity:1; } }
+  .copo { position:absolute; top:-16px; width:6px; height:6px; background:radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.85) 60%, rgba(255,255,255,0) 70%); border-radius:9999px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.08)); opacity:.9; }
+
+  /* Esferas doradas colgantes */
+  .orn{ position:absolute; width:42px; height:42px; border-radius:9999px; background:radial-gradient(circle at 30% 30%, var(--gold-3), var(--gold-2) 55%, var(--gold-1) 100%); box-shadow:inset 0 0 6px rgba(0,0,0,.15), 0 6px 14px rgba(184,137,46,.25); }
+  .string{ position:absolute; width:2px; background:linear-gradient(var(--gold-2),var(--gold-1)); }
+
+  /* Árbol animado inferior */
+  .tree-wrap{ position:relative; height:180px; }
+  .tree{ position:absolute; left:50%; bottom:0; transform:translateX(-50%); transform-origin:50% 100%; animation:mece 2.8s ease-in-out infinite; }
+  @keyframes mece { 0%,100%{ transform:translateX(-50%) rotate(-2deg);} 50%{ transform:translateX(-50%) rotate(2deg);} }
+  .trunk{ fill:#8b5a2b; }
+  .leaf1{ fill:#0e7a3e; } .leaf2{ fill:#119a4d; } .leaf3{ fill:#14b45c; }
+  .star{ fill:url(#goldGrad); filter:drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+
+  /* Botón dorado */
+  .btn-gold{ border:1px solid var(--gold-2); color:#1f2937; background:linear-gradient(180deg,#fff, #fffdf3); box-shadow:0 4px 10px rgba(0,0,0,.05); }
+  .btn-gold:hover{ background:linear-gradient(180deg,#fffdf6,#fff); }
+</style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-rose-50 via-fuchsia-50 to-pink-50 p-4 md:p-8">
-  <main class="max-w-6xl mx-auto space-y-6">
-    <!-- Panel de controles -->
-    <section class="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-5 md:p-7">
-      <h1 class="text-2xl font-extrabold tracking-tight">Configura tu invitación (HTML puro)</h1>
-      <div class="grid md:grid-cols-3 gap-5 mt-4">
-        <div class="space-y-3">
-          <label class="text-sm font-medium">Título</label>
-          <input id="titulo" class="w-full border rounded-lg p-2" value="Fiesta de Lanzamiento SANIYE" />
-          <label class="text-sm font-medium">Subtítulo</label>
-          <input id="subtitulo" class="w-full border rounded-lg p-2" value="Brilla con nuestro nuevo gloss ✨" />
-          <label class="text-sm font-medium">Descripción</label>
-          <textarea id="descripcion" rows="4" class="w-full border rounded-lg p-2">Acompáñanos a celebrar con música, regalos y muchas sorpresas. Dress code: toques rosados 💖</textarea>
-        </div>
-        <div class="space-y-3">
-          <label class="text-sm font-medium">Fecha</label>
-          <input id="fecha" class="w-full border rounded-lg p-2" value="Sábado 30 de agosto, 2025" />
-          <label class="text-sm font-medium">Hora</label>
-          <input id="hora" class="w-full border rounded-lg p-2" value="6:00 PM" />
-          <label class="text-sm font-medium">Lugar</label>
-          <input id="lugar" class="w-full border rounded-lg p-2" value="Showroom SANIYE – CDMX" />
-          <label class="text-sm font-medium">Dirección</label>
-          <input id="direccion" class="w-full border rounded-lg p-2" value="Av. Ejemplo 123, Col. Centro" />
-        </div>
-        <div class="space-y-3">
-          <label class="text-sm font-medium">Link de RSVP / info</label>
-          <input id="link" class="w-full border rounded-lg p-2" value="https://saniye.mx/rsvp" />
-          <div class="flex items-center gap-4 pt-2">
-            <label class="flex items-center gap-2 text-sm"><input id="nieveToggle" type="checkbox" checked> Nieve</label>
-            <label class="flex items-center gap-2 text-sm"><input id="qrToggle" type="checkbox" checked> Mostrar QR</label>
-          </div>
-          <div>
-            <label class="text-sm font-medium">Tema</label>
-            <select id="tema" class="w-full border rounded-lg p-2 mt-1">
-              <option value="rosa" selected>Rosa</option>
-              <option value="dorado">Dorado</option>
-              <option value="noche">Noche</option>
-            </select>
-          </div>
-          <div class="pt-2 grid grid-cols-2 gap-3 items-center">
-            <label class="text-sm">Logo</label>
-            <input id="logo" type="file" accept="image/*" class="text-sm" />
-            <label class="text-sm">Tamaño logo</label>
-            <input id="logoSize" type="range" min="60" max="260" step="10" value="140" />
-            <label class="text-sm">Opacidad logo</label>
-            <input id="logoOpacity" type="range" min="30" max="100" step="5" value="100" />
-            <label class="text-sm">Invertir (fondos oscuros)</label>
-            <input id="logoInvert" type="checkbox" />
-            <label class="text-sm">Posición logo</label>
-            <select id="logoPos" class="border rounded-lg p-2">
-              <option value="top-left">Arriba izq.</option>
-              <option value="top-center">Arriba centro</option>
-              <option value="top-right">Arriba der.</option>
-              <option value="center">Centro</option>
-              <option value="bottom-left">Abajo izq.</option>
-              <option value="bottom-center">Abajo centro</option>
-              <option value="bottom-right">Abajo der.</option>
-            </select>
-          </div>
-          <div class="flex gap-2 pt-2">
-            <button id="btnCopiar" class="px-3 py-2 rounded-xl bg-black text-white text-sm">Copiar texto</button>
-            <button id="btnPNG" class="px-3 py-2 rounded-xl bg-gray-200 text-sm">Exportar PNG</button>
-          </div>
-        </div>
+<body class="min-h-screen flex flex-col items-center p-6">
+  <div class="max-w-3xl w-full inv-card gold-border">
+    <!-- LOGO superior derecha -->
+    <img src="SANIYE - NEGRO.png" alt="Logo" class="absolute top-5 right-6 w-36" />
+
+    <!-- ENCABEZADO con nieve y esferas -->
+    <header class="header">
+      <!-- Esferas -->
+      <div class="string" style="left:60px; top:0; height:72px"></div>
+      <div class="orn" style="left:44px; top:68px"></div>
+      <div class="string" style="left:140px; top:0; height:92px"></div>
+      <div class="orn" style="left:124px; top:88px; width:34px; height:34px"></div>
+      <div class="string" style="left:calc(100% - 120px); top:0; height:86px"></div>
+      <div class="orn" style="left:calc(100% - 141px); top:82px; width:38px; height:38px"></div>
+
+      <!-- Título -->
+      <div class="h-full flex flex-col items-center justify-center text-center px-6">
+        <h1 class="title-gold text-4xl md:text-5xl font-extrabold tracking-tight">POSADA NAVIDEÑA</h1>
+        <p class="subtle mt-2">¡Acompáñanos a celebrar con ponche, villancicos y sorpresas! 🎄✨</p>
+      </div>
+
+      <!-- Nieve solo en header -->
+      <div id="snowHeader" class="absolute inset-0 pointer-events-none"></div>
+    </header>
+
+    <!-- Chips / Avisos -->
+    <div class="px-6 md:px-8 py-4 flex flex-wrap gap-2">
+      <span class="px-3 py-1 text-xs font-semibold rounded-full border" style="border-color:var(--gold-2); color:var(--gold-1); background:linear-gradient(180deg,#fff, #fffdf3);">Confirma asistencia antes del <strong>10 de noviembre de 2025</strong></span>
+      <a href="https://www.google.com/maps?q=Uni%C3%B3n%20253%2C%20Tepeyac%20Insurgentes%2C%20Gustavo%20A.%20Madero%2C%2007020%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX" target="_blank" class="px-3 py-1 text-xs font-semibold rounded-full btn-gold">Ver mapa</a>
+    </div>
+
+    <!-- Datos del evento -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 md:px-8">
+      <div class="rounded-xl border p-4" style="border-color:var(--gold-2); background:linear-gradient(180deg,#fff,#fffdf6)">
+        <p class="text-xs uppercase opacity-70">Fecha</p>
+        <p class="font-semibold">Martes 23 de diciembre de 2025</p>
+      </div>
+      <div class="rounded-xl border p-4" style="border-color:var(--gold-2); background:linear-gradient(180deg,#fff,#fffdf6)">
+        <p class="text-xs uppercase opacity-70">Hora</p>
+        <p class="font-semibold">Por confirmar</p>
+      </div>
+      <div class="rounded-xl border p-4" style="border-color:var(--gold-2); background:linear-gradient(180deg,#fff,#fffdf6)">
+        <p class="text-xs uppercase opacity-70">Lugar</p>
+        <p class="font-semibold">Jardín La Casa Verde</p>
       </div>
     </section>
 
-    <!-- Lienzo de la invitación -->
-    <section class="max-w-3xl mx-auto">
-      <div id="card" class="relative rounded-3xl shadow-xl overflow-hidden border-0 bg-gradient-to-br from-pink-100 via-rose-100 to-fuchsia-100" style="aspect-ratio:4/5;">
-        <!-- nieve -->
-        <div id="snow" class="pointer-events-none absolute inset-0 overflow-hidden"></div>
-
-        <!-- logo -->
-        <img id="logoImg" alt="Logo" class="absolute z-20 hidden" />
-
-        <!-- brillos -->
-        <div class="absolute inset-0">
-          <div class="absolute -top-10 -left-10 w-56 h-56 rounded-full blur-3xl opacity-40 bg-pink-300"></div>
-          <div class="absolute -bottom-10 -right-10 w-64 h-64 rounded-full blur-3xl opacity-40 bg-fuchsia-300"></div>
-        </div>
-
-        <div class="relative h-full w-full p-6 md:p-10 flex flex-col">
-          <div class="flex items-center justify-between">
-            <h2 id="outTitulo" class="text-2xl md:text-4xl font-extrabold tracking-tight drop-shadow-sm text-pink-600">Fiesta de Lanzamiento SANIYE</h2>
-            <span class="text-fuchsia-500" aria-hidden>🎉</span>
-          </div>
-          <p id="outSub" class="mt-2 text-sm md:text-base text-slate-700/80">Brilla con nuestro nuevo gloss ✨</p>
-
-          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
-              <div class="shrink-0">📅</div>
-              <div>
-                <p class="text-xs uppercase tracking-wide opacity-70">Fecha</p>
-                <p id="outFecha" class="font-semibold">Sábado 30 de agosto, 2025</p>
-              </div>
-            </div>
-            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
-              <div class="shrink-0">⏰</div>
-              <div>
-                <p class="text-xs uppercase tracking-wide opacity-70">Hora</p>
-                <p id="outHora" class="font-semibold">6:00 PM</p>
-              </div>
-            </div>
-            <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-start gap-3">
-              <div class="shrink-0">📍</div>
-              <div>
-                <p class="text-xs uppercase tracking-wide opacity-70">Lugar</p>
-                <p id="outLugar" class="font-semibold">Showroom SANIYE – CDMX</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
-            <div class="md:col-span-2 bg-white/70 backdrop-blur-md rounded-2xl shadow-md p-4">
-              <p id="outDesc" class="text-sm leading-relaxed whitespace-pre-line">Acompáñanos a celebrar con música, regalos y muchas sorpresas. Dress code: toques rosados 💖</p>
-              <a id="outLink" href="https://saniye.mx/rsvp" target="_blank" class="inline-flex mt-3 items-center gap-2 text-sm font-semibold underline text-pink-600">Confirmar asistencia</a>
-            </div>
-            <div id="qrWrap" class="bg-white/80 backdrop-blur-md rounded-2xl shadow-md p-4 flex items-center justify-center">
-              <canvas id="qrCanvas" width="156" height="156" aria-label="Código QR"></canvas>
-            </div>
-          </div>
-
-          <div class="mt-auto pt-4 flex items-center justify-between">
-            <div id="outDir" class="text-xs opacity-70">Av. Ejemplo 123, Col. Centro</div>
-            <div id="outYear" class="text-xs font-medium text-pink-600"></div>
-          </div>
+    <!-- Descripción, RSVP y dirección -->
+    <section class="px-6 md:px-8 py-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+      <div class="md:col-span-2">
+        <p class="text-gray-700">Te esperamos para compartir posada, piñata y alegría en un ambiente familiar. Habrá dulces, rifas y fotos.</p>
+        <div class="mt-3 flex items-center gap-3 flex-wrap">
+          <a href="https://saniye.mx/posada-rsvp" target="_blank" class="inline-flex items-center px-3 py-2 rounded-xl btn-gold text-sm font-semibold">Confirmar asistencia</a>
+          <span class="text-xs text-gray-500">*Fecha límite: 10 de noviembre de 2025</span>
         </div>
       </div>
+      <div class="rounded-2xl p-3 border" style="border-color:var(--gold-2); background:linear-gradient(180deg,#fff,#fffdf6)">
+        <p class="text-xs uppercase tracking-wide mb-2" style="color:var(--gold-1); font-weight:700;">Dirección</p>
+        <p class="text-sm text-gray-700">Unión 253, Tepeyac Insurgentes, Gustavo A. Madero, 07020 Ciudad de México, CDMX</p>
+        <a href="https://www.google.com/maps?q=Uni%C3%B3n%20253%2C%20Tepeyac%20Insurgentes%2C%20Gustavo%20A.%20Madero%2C%2007020%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX" target="_blank" class="mt-3 inline-block px-3 py-2 rounded-xl btn-gold text-sm font-semibold">Ver mapa</a>
+      </div>
     </section>
-  </main>
+
+    <!-- QR opcional -->
+    <div class="flex justify-center pb-2">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fsaniye.mx%2Fposada-rsvp&size=156x156" alt="QR RSVP" class="rounded-lg shadow" />
+    </div>
+
+    <!-- Árbol animado inferior -->
+    <div class="tree-wrap">
+      <svg class="tree" width="140" height="160" viewBox="0 0 140 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--gold-3)"/>
+            <stop offset="50%" stop-color="var(--gold-2)"/>
+            <stop offset="100%" stop-color="var(--gold-1)"/>
+          </linearGradient>
+        </defs>
+        <!-- estrella -->
+        <polygon class="star" points="70,6 76,22 94,22 80,32 86,48 70,38 54,48 60,32 46,22 64,22"/>
+        <!-- copas -->
+        <polygon class="leaf1" points="70,22 110,70 30,70" />
+        <polygon class="leaf2" points="70,46 120,108 20,108" />
+        <polygon class="leaf3" points="70,72 132,136 8,136" />
+        <!-- tronco -->
+        <rect class="trunk" x="60" y="136" width="20" height="18" rx="2" />
+        <!-- adornos dorados -->
+        <circle cx="88" cy="78" r="4" fill="url(#goldGrad)"/>
+        <circle cx="52" cy="90" r="4" fill="url(#goldGrad)"/>
+        <circle cx="70" cy="110" r="4" fill="url(#goldGrad)"/>
+      </svg>
+    </div>
+
+    <!-- Pie -->
+    <div class="text-xs text-gray-500 px-6 pb-6 flex justify-end">2025 · Invitación</div>
+  </div>
 
   <script>
-    const data = {
-      titulo: document.getElementById('titulo'),
-      subtitulo: document.getElementById('subtitulo'),
-      descripcion: document.getElementById('descripcion'),
-      fecha: document.getElementById('fecha'),
-      hora: document.getElementById('hora'),
-      lugar: document.getElementById('lugar'),
-      direccion: document.getElementById('direccion'),
-      link: document.getElementById('link'),
-      tema: document.getElementById('tema'),
-      nieveToggle: document.getElementById('nieveToggle'),
-      qrToggle: document.getElementById('qrToggle'),
-      logo: document.getElementById('logo'),
-      logoSize: document.getElementById('logoSize'),
-      logoOpacity: document.getElementById('logoOpacity'),
-      logoInvert: document.getElementById('logoInvert'),
-      logoPos: document.getElementById('logoPos'),
-    };
-
-    const out = {
-      card: document.getElementById('card'),
-      snow: document.getElementById('snow'),
-      logoImg: document.getElementById('logoImg'),
-      outTitulo: document.getElementById('outTitulo'),
-      outSub: document.getElementById('outSub'),
-      outFecha: document.getElementById('outFecha'),
-      outHora: document.getElementById('outHora'),
-      outLugar: document.getElementById('outLugar'),
-      outDesc: document.getElementById('outDesc'),
-      outLink: document.getElementById('outLink'),
-      outDir: document.getElementById('outDir'),
-      outYear: document.getElementById('outYear'),
-      qrWrap: document.getElementById('qrWrap'),
-      qrCanvas: document.getElementById('qrCanvas'),
-    };
-
-    const themes = {
-      rosa: { bg: 'from-pink-100 via-rose-100 to-fuchsia-100', primary: 'text-pink-600' },
-      dorado: { bg: 'from-amber-50 via-yellow-50 to-rose-50', primary: 'text-amber-600' },
-      noche: { bg: 'from-slate-900 via-fuchsia-900/40 to-slate-900', primary: 'text-fuchsia-400', dark:true },
-    };
-
-    function applyTheme() {
-      const t = themes[data.tema.value] || themes.rosa;
-      out.card.className = `relative rounded-3xl shadow-xl overflow-hidden border-0 bg-gradient-to-br ${t.bg}`;
-      out.outTitulo.className = `text-2xl md:text-4xl font-extrabold tracking-tight drop-shadow-sm ${t.primary}`;
-      out.outLink.className = `inline-flex mt-3 items-center gap-2 text-sm font-semibold underline ${t.primary}`;
-      out.outYear.className = `text-xs font-medium ${t.primary}`;
-      // fondo oscuro => sugerir invertir logo
-      if (themes[data.tema.value]?.dark) { data.logoInvert.checked = true; }
-      updateLogo();
+    // NIEVE en encabezado
+    const box = document.getElementById('snowHeader');
+    const N = 60; // densidad
+    for(let i=0;i<N;i++){
+      const s = document.createElement('span');
+      s.className = 'copo';
+      const size = 2 + Math.random()*6; // 2-8px
+      s.style.width = size+'px'; s.style.height = size+'px';
+      s.style.left = (Math.random()*100)+'%';
+      const dur = 7 + Math.random()*9; // 7-16s
+      const delay = Math.random()*8;
+      s.style.animation = `caer ${dur}s linear ${delay}s infinite`;
+      box.appendChild(s);
     }
-
-    function renderText() {
-      out.outTitulo.textContent = data.titulo.value;
-      out.outSub.textContent = data.subtitulo.value;
-      out.outFecha.textContent = data.fecha.value;
-      out.outHora.textContent = data.hora.value;
-      out.outLugar.textContent = data.lugar.value;
-      out.outDesc.textContent = data.descripcion.value;
-      out.outLink.href = data.link.value || '#';
-      out.outDir.textContent = data.direccion.value;
-      out.outYear.textContent = new Date().getFullYear() + ' · Invitación';
-    }
-
-    // QR
-    function renderQR() {
-      out.qrWrap.classList.toggle('hidden', !data.qrToggle.checked);
-      if (!data.qrToggle.checked) return;
-      QRCode.toCanvas(out.qrCanvas, data.link.value || 'https://example.com', { width: 156, margin: 1 }, (e)=>{ if(e) console.error(e); });
-    }
-
-    // Nieve
-    function snowOn() {
-      out.snow.innerHTML = '';
-      if (!data.nieveToggle.checked) return;
-      const N = 70;
-      for (let i=0;i<N;i++) {
-        const s = document.createElement('span');
-        s.className = 'flake';
-        const size = Math.random()*6 + 2; // 2-8px
-        s.style.width = size+'px'; s.style.height = size+'px';
-        s.style.left = Math.random()*100+'%';
-        const dur = 8 + Math.random()*10; // 8-18s
-        const delay = Math.random()*10;
-        s.style.animation = `fall ${dur}s linear ${delay}s infinite`;
-        out.snow.appendChild(s);
-      }
-    }
-
-    // Logo
-    let logoURL = null;
-    data.logo.addEventListener('change', (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{ logoURL = reader.result; updateLogo(); };
-      reader.readAsDataURL(file);
-    });
-
-    function updateLogo() {
-      if (!logoURL) { out.logoImg.classList.add('hidden'); return; }
-      out.logoImg.src = logoURL;
-      out.logoImg.classList.remove('hidden');
-      const pos = {
-        'top-left': ['top:1.5rem','left:1.5rem','transform:none'],
-        'top-center': ['top:1.5rem','left:50%','transform:translateX(-50%)'],
-        'top-right': ['top:1.5rem','right:1.5rem','transform:none'],
-        'center': ['top:50%','left:50%','transform:translate(-50%,-50%)'],
-        'bottom-left': ['bottom:1.5rem','left:1.5rem','transform:none'],
-        'bottom-center': ['bottom:1.5rem','left:50%','transform:translateX(-50%)'],
-        'bottom-right': ['bottom:1.5rem','right:1.5rem','transform:none'],
-      }[data.logoPos.value] || [];
-      out.logoImg.style.cssText = `${pos.join(';')}; width:${data.logoSize.value}px; opacity:${data.logoOpacity.value/100}; filter:${data.logoInvert.checked?'invert(1)':'none'};`;
-    }
-
-    // Copiar texto
-    document.getElementById('btnCopiar').addEventListener('click', async ()=>{
-      const text = `${data.titulo.value}\n${data.subtitulo.value}\n${data.fecha.value} – ${data.hora.value}\n${data.lugar.value}\n${data.direccion.value}\nConfirma: ${data.link.value}`;
-      try { await navigator.clipboard.writeText(text); alert('Texto copiado ✨'); } catch(e){ alert('No se pudo copiar'); }
-    });
-
-    // Exportar PNG
-    document.getElementById('btnPNG').addEventListener('click', async ()=>{
-      try { const dataUrl = await htmlToImage.toPng(out.card,{pixelRatio:2}); saveAs(dataUrl,'invitacion.png'); } catch(e){ alert('No pude exportar 😅'); }
-    });
-
-    // Listeners de cambios
-    ['input','change'].forEach(evt=>{
-      ['titulo','subtitulo','descripcion','fecha','hora','lugar','direccion','link'].forEach(id=>{
-        data[id].addEventListener(evt, ()=>{ renderText(); renderQR(); });
-      });
-      data.tema.addEventListener(evt, applyTheme);
-      data.nieveToggle.addEventListener(evt, snowOn);
-      data.qrToggle.addEventListener(evt, renderQR);
-      ['logoSize','logoOpacity','logoInvert','logoPos'].forEach(id=>{
-        data[id].addEventListener(evt, updateLogo);
-      });
-    });
-
-    // Inicio
-    renderText(); applyTheme(); renderQR(); snowOn(); updateLogo();
   </script>
 </body>
 </html>
+
+
